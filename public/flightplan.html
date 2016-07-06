@@ -1,0 +1,28 @@
+<h2>Flightplan&nbsp;</h2>
+<input type="button" v-on:click="runMission" value="run mission"/>
+<input type="button" v-on:click="abortMission" value="abort mission"/>
+<input type="button" v-on:click="toggleMap" value="show map editor" id="flightplan-toggle-map"/>
+<br><br>
+<div id="flightplan-table">
+  <h3>add commands</h3>
+  <select v-model="newCommand" value="takeoff">
+    <option v-for="cmd in availableCmds">{{cmd}}</option>
+  </select>
+  <input v-model="newParam" placeholder="parameter"/>
+  <input type="button" v-on:click="addCommand" value="add command"/>
+  <h3 v-show="commandList.length">command list</h3>
+  <table v-show="commandList.length">
+    <thead><tr><th>command</th><th>parameter</th></thead>
+    <tbody><tr v-for="cmd in commandList" data-index="{{$index}}">
+      <td>{{cmd[0]}}</td>
+      <td>{{cmd[1]}}</td>
+      <td><button v-on:click="deleteCommand">delete</button></td>
+    </tr></tbody>
+  </table>
+</div>
+<div id="flightplan-map-container" class="hidden">
+  <div id="flightplan-map"></div>
+  <br>
+  <input v-model="snapGrid" type="checkbox"/><label for="flightplan-snap-grid">snap to grid</label>&nbsp;
+  <input v-on:click="buildMapCommands" type="button" value="calculate flight commands"/>
+</div>

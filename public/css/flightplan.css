@@ -1,0 +1,58 @@
+.hidden {
+  display: none;
+}
+
+#flightplan {
+  font-family: Arial;
+  color: #fff;
+  position:absolute;
+  right:0;
+  top:0;
+  bottom:0;
+  z-index:100;
+  padding: 30px;
+  background: rgba(0,0,0,0.5);
+  margin-left: auto;
+  margin-right: auto;
+
+
+}
+
+#flightplan h2 {
+  font-family: Audiowide, Arial;
+  display: inline;
+}
+
+#flightplan h3:before {
+  content: '> ';
+}
+
+#flightplan-table th {
+  border-bottom: 1px #666 solid;
+  min-width: 150px;
+}
+
+#flightplan-map-container {
+  width: 100%;
+  height: 75%;
+}
+
+#flightplan-map {
+  cursor: crosshair;
+  width: 100%;
+  height: 100%;
+}
+
+.leaflet-grid-label .gridlabel-vert {
+  color: #000;
+  margin-left: 8px;
+  -webkit-transform: rotate(90deg);
+  transform: rotate(90deg);
+}
+
+.leaflet-grid-label .gridlabel-vert,
+.leaflet-grid-label .gridlabel-horiz {
+  color: #000;
+  padding-left:2px;
+  text-shadow: -2px 0 #FFFFFF, 0 2px #FFFFFF, 2px 0 #FFFFFF, 0 -2px #FFFFFF;
+}
