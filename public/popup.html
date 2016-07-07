@@ -1,0 +1,19 @@
+<span>
+  height (m):&nbsp;
+  <input v-model="selectedWP.height" v-on:input="editHeight" type="number" style="width: 4em"/>
+</span>
+<input v-on:click="deleteWaypoint" type="button" value="delete waypoint"/>
+<br><br>
+<select v-model="newCommand">
+  <option v-for="cmd in availableCmds">{{cmd}}</option>
+</select>
+<input v-model="newParam" size="8" placeholder="parameter"/>
+<input type="button" v-on:click="addCmdToWP" value="add command"/>
+<table v-show="selectedWP.cmds.length">
+  <thead><tr><th>command</th><th>parameter</th></thead>
+  <tbody><tr v-for="cmd in selectedWP.cmds" data-index="{{$index}}">
+    <td>{{cmd[0]}}</td>
+    <td>{{cmd[1]}}</td>
+    <td><button v-on:click="deleteCmdFromWP">delete</button></td>
+  </tr></tbody>
+</table>

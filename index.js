@@ -80,7 +80,7 @@ function validateMissionData(missionData) {
   return result;
 }
 
-function initMission(logFile) {
+function initMission(logPath) {
   var controller = new autonomy.Controller(client);
   mission = new autonomy.Mission(client, controller);
 
@@ -96,7 +96,7 @@ function initMission(logFile) {
   mission.client().config('video:video_channel', 1);
   mission.client().config('detect:detect_type', 12);
   
-  if (logFile) mission.log(logFile);
+  if (logPath) mission.log(logPath);
 
   mission.zero();
   return mission;

@@ -9,13 +9,12 @@
   right:0;
   top:0;
   bottom:0;
+  width: 600px;
   z-index:100;
   padding: 30px;
   background: rgba(0,0,0,0.5);
   margin-left: auto;
   margin-right: auto;
-
-
 }
 
 #flightplan h2 {
