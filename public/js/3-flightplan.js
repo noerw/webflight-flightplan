@@ -121,7 +121,7 @@
     L.Icon.Default.imagePath = this.basePath + 'images';
     this.map = L.map('flightplan-map', { center: [0, 0], minZoom: -2, zoom: 7, crs: L.CRS.Simple });
 
-    L.simpleGraticule({
+    this.mapGrid = L.simpleGraticule({
       interval: 1,
       zoomIntervals: [
         {start: -2, end: 0, interval: 100},
@@ -143,7 +143,7 @@
     // add marker to map on click
     this.map.on('click', function(e) {
       // TODO: adapt to gridsize from simple graticule
-      var ll = this.vue.snapGrid ? [Math.round(e.latlng.lat), Math.round(e.latlng.lng)] : e.latlng;
+      var ll = this.vue.snapGrid ? snapToGrid(this.mapGrid, e.latlng) : e.latlng;
       var point = L.circleMarker(ll, {radius: 7, fillOpacity: 1}).addTo(this.map);
 
       point.prev = this.lastPoint;
@@ -173,6 +173,15 @@
       this.lastPoint = point;
     }, this);
   };
+
+  function snapToGrid(grid, latlng) {
+    var g = grid.options.interval;
+    return L.latLng(snap(g, latlng.lat), snap(g, latlng.lng));
+  
+    function snap(gridSize, val) {
+      return gridSize * Math.round(val/gridSize);
+    }
+  }
 
   window.Cockpit.plugins.push(Flightplan);
 
