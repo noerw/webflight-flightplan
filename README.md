@@ -22,7 +22,7 @@ The ardrone-autonomy driver relies on the drones sensors and bottom-camera for s
 This means that the drone can not fly over floors / groundstructures without a texture / high contrast areas.
 -> Indoor flights did not work well as of now!
 See [this issue](https://github.com/eschnou/ardrone-autonomy/issues/8) for details.
-([Tags](blob/master/OBW-Roundel.png) in a non-uniform placement might improve the performance)
+([Tags](OBW-Roundel.png) in a non-uniform placement might improve the performance)
 
 ## Installing and enabling the plugin
 Assuming you have installed `ardrone-webflight` in `./ardrone-webflight`, and have `node`, `npm` and `git` installed:
@@ -31,7 +31,7 @@ Assuming you have installed `ardrone-webflight` in `./ardrone-webflight`, and ha
 - install dependencies:         `cd webflight-flightplan && npm install`
 - link the plugin to webflight: `ln -s ./ ../ardrone-webflight/plugins/flightplan`
 
-To enable the installed plugin, just add it to the plugins array.
+To enable the installed plugin, just add it to the plugins array in webflight's `config.js`.
 It might look something like this:
 
 ```js
