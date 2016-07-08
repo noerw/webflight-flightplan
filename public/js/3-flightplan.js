@@ -1,12 +1,10 @@
 (function(window, document, $) {
   var Flightplan = function(cockpit) {
-
     console.log('Loading flightplan plugin.');
-    this.basePath = '/plugin/flightplan/'
+
+    this.basePath = '/plugin/flightplan/';
+    this.waypoints = {};
     this.cockpit = cockpit;
-    this.cockpit.socket.on('/flightplan/commands', function(commandList) {
-      this.vue.availableCmds = commandList;
-    }.bind(this));
 
     $('.main-container').append('<div class="hidden" id="flightplan"></div>');
     $('#controls').prepend('<input type="button" id="flightplan-toggle" value="Toggle Flightplan"/>');
@@ -30,7 +28,6 @@
           newCommand: 'hover',
           newParam: '',
           snapGrid: true,
-          waypoints: {},
           selectedWP: { id: 0, cmds: [], height: undefined },
         },
         methods: {
@@ -39,9 +36,62 @@
             this.commandList.push([this.newCommand, this.newParam || 0]);
             this.newParam = '';
           },
+
           deleteCommand: function(e) {
             this.commandList.splice($(e.target).parent().parent().data('index'), 1);
           },
+
+          addCmdToWP: function() {
+            if (!this.vue.newCommand) return;
+            this.vue.selectedWP.cmds.push([this.vue.newCommand, this.vue.newParam || 0]);
+            this.vue.newParam = '';
+          }.bind(this),
+
+          deleteCmdFromWP: function(e) {
+            this.waypoints[this.vue.selectedWP.id].cmds
+              .splice($(e.target).parent().parent().data('index'), 1);
+          }.bind(this),
+
+          editHeight: function(e) {
+            this.waypoints[this.vue.selectedWP.id].height = e.target.value;
+          }.bind(this),
+
+          deleteWaypoint: function(e) {
+            var p = this.waypoints[this.vue.selectedWP.id];
+            this.map.removeLayer(p.line).removeLayer(p).removeLayer(this.mapPopup);
+
+            p.prev.next = p.next;
+            if (p.next) {
+              p.next.prev = p.prev;
+              p.next.line.removeFrom(this.map);
+              p.next.line = L.polyline([p.prev.getLatLng(), p.next.getLatLng()]).addTo(this.map);
+            } else {
+              this.lastPoint = p.prev;
+            }
+
+            // TODO: fix vue destroy thingy (bc manual compile of manual compile of popup dom?!)
+            Vue.delete(this.waypoints, this.vue.selectedWP.id);
+            this.vue.selectedWP.id = 0;
+            this.vue.selectedWP.cmds = [];
+          }.bind(this),
+
+          buildMapCommands: function(e) {
+            // add commands from each point in order
+            var p = this.waypoints[0].next, ll, goParam;
+            this.vue.commandList = [];
+            while (p) {
+              ll = p.getLatLng();
+              goParam = '{"x":' + ll.lat + ',"y":' + ll.lng;
+              if (p.height !== undefined) goParam += ',"z":' + p.height;
+              this.vue.commandList.push(['go', goParam +  '}']);
+
+              for (var cmd of p.cmds)
+                this.vue.commandList.push([cmd[0], cmd[1]]);
+
+              p = p.next;
+            }
+          }.bind(this),
+
           runMission: function() {
             if (!this.vue.commandList.length)
               this.vue.buildMapCommands();
@@ -49,6 +99,7 @@
             if (this.vue.commandList.length)
               this.cockpit.socket.emit('/flightplan/run', this.vue.commandList);
           }.bind(this),
+
           abortMission: function() {
             this.cockpit.socket.emit('/flightplan/stop');
           }.bind(this),
@@ -62,55 +113,13 @@
             }
             $('#flightplan-map-container, #flightplan-table').toggleClass('hidden');
             this.map.invalidateSize(false); // fixes display of grid on hidden maps
-          }.bind(this),
-          buildMapCommands: function(e) {
-            // add commands from each point in order
-            var p = this.waypoints[0].next, ll, goParam;
-            this.commandList = [];
-            while (p) {
-              ll = p.getLatLng();
-              goParam = '{"x":' + ll.lat + ',"y":' + ll.lng;
-              if (p.height !== undefined) goParam += ',"z":' + p.height;
-              this.commandList.push(['go', goParam +  '}']);
-
-              for (var cmd of p.cmds)
-                this.commandList.push([cmd[0], cmd[1]]);
-
-              p = p.next;
-            }
-          },
-          addCmdToWP: function() {
-            if (!this.newCommand) return;
-            this.waypoints[this.selectedWP.id].cmds.push([this.newCommand, this.newParam || 0]);
-            this.newParam = '';
-          },
-          editHeight: function(e) {
-            this.waypoints[this.selectedWP.id].height = e.target.value;
-          },
-          deleteCmdFromWP: function(e) {
-            this.waypoints[this.selectedWP.id].cmds
-              .splice($(e.target).parent().parent().data('index'), 1);
-          },
-          deleteWaypoint: function(e) {
-            var p = this.vue.waypoints[this.vue.selectedWP.id];
-            this.map.removeLayer(p.line).removeLayer(p).removeLayer(this.mapPopup);
-
-            p.prev.next = p.next;
-            if (p.next) {
-              p.next.prev = p.prev;
-              p.next.line.removeFrom(this.map);
-              p.next.line = L.polyline([p.prev.getLatLng(), p.next.getLatLng()]).addTo(this.map);
-            } else {
-              this.lastPoint = p.prev;
-            }
-
-            // TODO: fix vue destroy thingy (bc manual compile of manual compile of popup dom?!)
-            Vue.delete(this.vue.waypoints, this.vue.selectedWP.id);
-            this.vue.selectedWP.id = 0;
-            this.vue.selectedWP.cmds = [];
           }.bind(this)
         }
       });
+
+      this.cockpit.socket.on('/flightplan/commands', function(commandList) {
+        this.vue.availableCmds = commandList;
+      }.bind(this));
 
       $.get(this.basePath + 'popup.html', {}, this.initMap.bind(this));
 
@@ -137,13 +146,12 @@
     }).setContent(popupContent);
 
     // linked list, containing all the points
-    this.vue.waypoints = { 0: L.marker([0,0]).bindPopup('HOME').addTo(this.map)};
-    this.lastPoint = this.vue.waypoints[0];
+    this.waypoints = { 0: L.marker([0,0]).bindPopup('HOME').addTo(this.map)};
+    this.lastPoint = this.waypoints[0];
 
     // add marker to map on click
     this.map.on('click', function(e) {
-      // TODO: adapt to gridsize from simple graticule
-      var ll = this.vue.snapGrid ? snapToGrid(this.mapGrid, e.latlng) : e.latlng;
+      var ll = this.vue.snapGrid ? this.snapToGrid(e.latlng) : e.latlng;
       var point = L.circleMarker(ll, {radius: 7, fillOpacity: 1}).addTo(this.map);
 
       point.prev = this.lastPoint;
@@ -158,9 +166,8 @@
         L.DomEvent.stopPropagation(e);
         this.mapPopup.setLatLng(e.target.getLatLng()).openOn(this.map);
         this.vue.selectedWP.id = e.target._leaflet_id;
-        //TODO: improve handling of cmds array, no proxy needed?!
-        this.vue.selectedWP.cmds = this.vue.waypoints[e.target._leaflet_id].cmds;
-        this.vue.selectedWP.height = this.vue.waypoints[e.target._leaflet_id].height;
+        this.vue.selectedWP.cmds = this.waypoints[e.target._leaflet_id].cmds;
+        this.vue.selectedWP.height = this.waypoints[e.target._leaflet_id].height;
         
         // need to manually compile, as the popup node is dynamically added to the DOM
         // TODO: improve handling?
@@ -168,14 +175,14 @@
       }, this);
 
       // linked list "add" logic
-      this.vue.waypoints[point._leaflet_id] = point;
+      this.waypoints[point._leaflet_id] = point;
       this.lastPoint.next = point;
       this.lastPoint = point;
     }, this);
   };
 
-  function snapToGrid(grid, latlng) {
-    var g = grid.options.interval;
+  Flightplan.prototype.snapToGrid = function(latlng) {
+    var g = this.mapGrid.options.interval;
     return L.latLng(snap(g, latlng.lat), snap(g, latlng.lng));
   
     function snap(gridSize, val) {

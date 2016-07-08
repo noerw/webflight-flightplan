@@ -1,6 +1,8 @@
 var autonomy = require('ardrone-autonomy'),
   arDroneConstants = require('ar-drone/lib/constants'),
-  socket, client, mission = null;
+  sockets = [],
+  client = null,
+  mission = null;
 
 var legitCmds = [
   'takeoff', 'land', 'hover', 'wait',
@@ -11,8 +13,8 @@ var legitCmds = [
 function Flightplan(name, deps) {
   client = deps.client;
 
-  deps.io.on('connection', function(sock) {
-    socket = sock;
+  deps.io.on('connection', function(socket) {
+    sockets.push(socket);
     socket.emit('/flightplan/commands', legitCmds);
 
     socket.on('/flightplan/stop', stopMission);
@@ -21,14 +23,13 @@ function Flightplan(name, deps) {
 };
 
 function runMission(missionData) {
-  var valid = validateMissionData(missionData);
-
   if (mission)
     return logClient('mission already running!', 'error');
 
   mission = initMission();
 
-  if (!valid.hasTakeoff)
+  // insert takeoff if mission does not begin with one
+  if (missionData[0][0] !== 'takeoff')
     mission.takeoff();
 
   // add each command to mission plan (& filter allowed cmds)
@@ -44,19 +45,18 @@ function runMission(missionData) {
     mission[cmd[0]](param);
   }
 
-  if (!valid.hasLanding)
+  // insert landing if mission does not begin with one
+  if (missionData[missionData.length - 1][0] !== 'land')
     mission.land();
 
   logClient('mission started!', 'success');
   mission.run(function (err, result) {
-    if (err) {
-      mission.client().stop();
-      mission.client().land();
+    if (err)
       logClient('<b>error during mission! aborting</b><br>' + err.message, 'error');
-    } else {
+    else
       logClient('mission completed!', 'success');
-    }
-    mission = null;
+    
+    stopMission();
   });
 };
 
@@ -67,17 +67,6 @@ function stopMission() {
   mission.client().land();
   mission = null;
   logClient('mission stopped!')
-}
-
-function validateMissionData(missionData) {
-  var result = { hasTakeoff: true, hasLanding: true };
-
-  if (missionData[0][0] !== 'takeoff')
-    result.hasTakeoff = false;
-  if (missionData[missionData.length -1][0] !== 'land')
-    result.hasLanding = false;
-
-  return result;
 }
 
 function initMission(logPath) {
@@ -108,7 +97,9 @@ function initMission(logPath) {
 
 function logClient(message, type) {
   console.log('Flightplan: ' + message);
-  socket.emit('/' + (type || 'message'), '<b>Flightplan:</b> ' + message);
+  for (var s of sockets)
+    s.emit('/' + (type || 'message'), '<b>Flightplan:</b> ' + message);
+
 }
 
 module.exports = Flightplan;
